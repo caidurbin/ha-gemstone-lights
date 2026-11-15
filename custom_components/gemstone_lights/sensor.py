@@ -79,4 +79,70 @@ class GemstoneNowPlaying(GemstoneEntity, SensorEntity):
             "pixel_count": settings.get("pixelCount") or hub.get("pixelCount"),
             "rgbw_sequence": settings.get("rgbwSequence") or hub.get("rgbwSequence"),
             **self.coordinator.recovery_details(self._device_id),
+            "color_rgbw": _rgbw(color),
+            **{
+                f"pattern_{key}": value
+                for key, value in _pattern_details(state.get("pattern")).items()
+            },
+            "zone_patterns": self._zone_patterns(state.get("architectural")),
+            "timer": _timer(state.get("timer")),
         }
+
+    def _zone_patterns(self, design: Any) -> list[dict[str, Any]] | None:
+        """Describe each zone's pattern in a playing design, named where known."""
+        if not isinstance(design, dict) or not design.get("zonePatterns"):
+            return None
+        names = {
+            zone.get("id"): zone.get("name")
+            for zone in self.coordinator.zones(self._device_id)
+        }
+        return [
+            {
+                "zone_id": entry.get("zoneId"),
+                "zone": names.get(entry.get("zoneId")),
+                "pattern": pattern.get("name"),
+                **_pattern_details(pattern),
+            }
+            for entry in design["zonePatterns"]
+            if isinstance(entry, dict)
+            for pattern in [_as_dict(entry.get("pattern"))]
+        ]
+
+
+def _as_dict(value: Any) -> dict[str, Any]:
+    """Treat anything but a dict as empty, so a malformed record cannot raise."""
+    return value if isinstance(value, dict) else {}
+
+
+def _rgbw(value: Any) -> list[int] | None:
+    """Convert a packed controller colour into Home Assistant's rgbw_color form."""
+    if not isinstance(value, int) or isinstance(value, bool):
+        return None
+    return list(unpack(value) or ())
+
+
+def _pattern_details(pattern: Any) -> dict[str, Any]:
+    """Describe a pattern, keeping off pixels in the colour list.
+
+    A colour of 0 is an unlit pixel, not a missing value: dropping it would lose
+    the spacing of patterns such as "2 on, 4 off".
+    """
+    pattern = _as_dict(pattern)
+    colors = pattern.get("colors")
+    return {
+        "colors": [_rgbw(color) for color in colors]
+        if isinstance(colors, list)
+        else None,
+        "animation": pattern.get("animation"),
+        "speed": pattern.get("speed"),
+        "brightness": pattern.get("brightness"),
+        "direction": pattern.get("direction"),
+        "background_color": _rgbw(pattern.get("backgroundColor")),
+    }
+
+
+def _timer(timer: Any) -> dict[str, Any] | None:
+    """Return the controller timer that started the current content, if any."""
+    if not isinstance(timer, dict):
+        return None
+    return {key: timer.get(key) for key in ("on", "off", "sunset")}
