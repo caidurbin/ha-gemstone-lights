@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.9.0-cai.1
+
+- Expose the playing content's details on the Now playing sensor: the solid
+  colour and the pattern's palette as `rgbw_color` values (unlit pixels kept in
+  order), animation, speed, brightness, direction and background, each zone's
+  pattern in a zoned design, and the controller timer that started it.
+
 ## 1.8.1 — 2026-10-21
 
 - Require an explicit, unchecked-by-default opt-in before account mode enables

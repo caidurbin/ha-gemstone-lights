@@ -115,6 +115,22 @@ you want this behavior. The upgrade does not change the controller's current
 The Now playing sensor's `control` attribute reports `local` (LAN), `bluetooth`,
 or `cloud`. Bluetooth control does not require the HTTP local-command switch.
 
+The Now playing sensor also describes the content in enough detail to reuse it.
+Colours use Home Assistant's `rgbw_color` order, `[red, green, blue, white]`:
+
+| Attribute | Content |
+| --- | --- |
+| `color_rgbw` | The solid colour, when one is playing. |
+| `pattern_colors` | The playing pattern's palette, in order. An unlit pixel is `[0, 0, 0, 0]` and stays in the list, so spacing such as "2 on, 4 off" survives. |
+| `pattern_animation`, `pattern_speed`, `pattern_brightness`, `pattern_direction`, `pattern_background_color` | The rest of the playing pattern. |
+| `zone_patterns` | For a zoned design, one entry per zone: `zone_id`, `zone` (its name, when known), `pattern` and the same pattern fields. |
+| `timer` | The controller timer that started the current content: `on`, `off` and `sunset`. |
+
+These attributes are only as current as the state source. If the controller's
+local state stops following changes made in the vendor app, turn off **Use local
+control when available** in Configure; state reads and commands then go through
+the cloud.
+
 Known addresses, zones, patterns, designs and library content are saved locally.
 Local-only mode restores them without logging in or refreshing cloud catalogs.
 Failed local reads mark the controller unavailable and retry on the next poll;
